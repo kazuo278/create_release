@@ -1,0 +1,28 @@
+name: Create a release
+
+on:
+  pull_request:
+    types:
+      - "closed"
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: get env
+        run: env
+      - name: get latest tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          CURRENT_TAG=$(git rev-parse --abbrev-ref @ | sed -r 's%^feature/(.+)$%\1%g')
+          echo LATEST_TAG=$LATEST_TAG
+          echo CURRENT_TAG=$CURRENT_TAG
+      - name: get release
+        run: |
+          curl -X GET \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/releases/$LATEST_TAG
