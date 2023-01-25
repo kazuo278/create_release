@@ -5,6 +5,13 @@ TARGET_TAG=$1
 # タグメッセージ
 TAG_MESSAGE=$2
 
+cat << EOM
+以下のタグを作成します。
+
+タグ名：$TARGET_TAG
+タグ注釈：$TAG_MESSAGE
+EOM
+
 # 作成対象のタグが存在するかチェック
 ## lightweightタグ(refs/tags/$タグ名^{})は除外するよう、正規表現に「refs/tags/$TARGET_TAG$」を指定
 ## 参考：https://zenn.dev/heyhey1028/articles/9ae35cf35c410d
@@ -12,6 +19,7 @@ REMOTE_TARGET_TAG=$(git ls-remote --tags 2>/dev/null | grep "refs/tags/$TARGET_T
 
 #　存在する場合はタグを削除
 if [ -n "$REMOTE_TARGET_TAG" ]; then
+  echo "タグ$TARGET_TAGは、既に存在するため削除します。"
   ## ローカルリポジトリのタグを削除
   git tag -d $TARGET_TAG
   ## リモートリポジトリのタグを削除
