@@ -1,0 +1,96 @@
+name: Create a release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
+  push:
+    branches:
+      - 'feature/*'
+
+jobs:
+  set-outputs:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      target_tag: ${{ steps.set-tag-info.outputs.target_tag }}
+      remote_target_tag: ${{ steps.set-tag-info.outputs.remote_target_tag }}
+      tag_message: ${{ steps.set-tag-info.outputs.tag_message }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: get env
+        run: env
+      - name: test
+        run: |
+          git config user.name "$(git log -1 --pretty=format:'%an')"
+          git config user.email "$(git log -1 --pretty=format:'%ae')"
+          git tag -a test -m "コメント"
+          git push origin test
+          git push origin -d test
+          echo $GITHUB_ACTOR
+          echo ${{ github.actor }}
+          echo ${{ github.event.push }}
+          echo ${{ github.event.push.sender }}
+      - id: set-tag-info
+        name: get tag info
+        run: |
+          # 作成するタグ名(feature/release-xxx)
+          TARGET_TAG=$(git rev-parse --abbrev-ref @ | sed -r 's%^feature/release-(.+)$%\1%g')
+          # 作成対象のタグがリモートリポジトリに作成済みの場合は取得
+          # lightweightタグは取得しないよう、正規表現に「refs/tags/$TARGET_TAG$」を指定
+          # 参考：https://zenn.dev/heyhey1028/articles/9ae35cf35c410d
+          REMOTE_TARGET_TAG=$(git ls-remote --tags 2>/dev/null | grep "refs/tags/$TARGET_TAG$" | awk -F' ' '{print $2}')
+          # タグ注釈の作成
+          # タグが作成済みの場合、タグの注釈を取得
+          if [ -n "$"refs/tags/$TARGET_TAG$" " ]; then
+              EXISTING_MESSAGE=$(git tag -n ${{ needs.create-tag.outputs.target_tag }} | awk -F' ' '{print $2}')
+          fi
+          # プルリクエストがマージされた場合、リリースバージョンとする
+          if [[ "${{ github.event.pull_request.merged }}" == true ]]; then
+            TAG_MESSAGE="リリース $TARGET_TAG"
+          # 既存のリリースバージョンの場合、同様のメッセージを利用
+          elif [[ $EXISTING_MESSAGE =~ ^.+リリース.+$ ]]; then
+            TAG_MESSAGE="$EXISTING_MESSAGE"
+          # その他の場合、検証中とする
+          else
+            TAG_MESSAGE="検証中"
+          fi
+
+          # 確認
+          echo "target_tag=$TARGET_TAG"
+          echo "remote_target_tag=$REMOTE_TARGET_TAG"
+          echo "tag_message=$TAG_MESSAGE"
+
+          # outputsへ登録
+          echo "target_tag=$TARGET_TAG" >> $GITHUB_OUTPUT
+          echo "remote_target_tag=$REMOTE_TARGET_TAG" >> $GITHUB_OUTPUT
+          echo "tag_message=$TAG_MESSAGE" >> $GITHUB_OUTPUT
+        shell: bash
+  create-tag:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: set-outputs
+    steps:
+      - uses: actions/checkout@v3
+      - name: test
+        run: |
+          echo "needs.set-outputs.outputs.target_tag=${{ needs.set-outputs.outputs.target_tag }}"
+          echo "needs.set-outputs.outputs.tag_message=${{ needs.set-outputs.outputs.tag_message }}"
+          echo "needs.set-outputs.outputs.remote_target_tag=${{ needs.set-outputs.outputs.remote_target_tag }}"
+      - name: delete tag if it exists
+        if: "${{ needs.set-outputs.outputs.remote_target_tag != '' }}"
+        run: |
+          git push origin -d ${{ needs.set-outputs.outputs.target_tag }}
+      - name: cleate tag
+        run: |
+          git config user.name "$(git log -1 --pretty=format:'%an')"
+          git config user.email "$(git log -1 --pretty=format:'%ae')"
+          git tag -a ${{ needs.set-outputs.outputs.target_tag }} -m "${{ needs.set-outputs.outputs.tag_message }}"
+          git push origin ${{ needs.set-outputs.outputs.target_tag }}
