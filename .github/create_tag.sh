@@ -7,9 +7,8 @@ TAG_MESSAGE=$2
 
 cat << EOM
 以下のタグを作成します。
-
-タグ名：$TARGET_TAG
-タグ注釈：$TAG_MESSAGE
+  タグ名：$TARGET_TAG
+  タグ注釈：$TAG_MESSAGE
 EOM
 
 # 作成対象のタグが存在するかチェック
