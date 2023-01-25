@@ -32,7 +32,7 @@ jobs:
           # タグの登録
           sh ./.github/create_tag.sh $TARGET_TAG $TAG_MESSAGE
       - name: create tag for pull request closed event
-        if: github.event.pull_request.merged == true
+        if: github.event.pull_request.merged == true && && startsWith(github.head_ref,'feature/release-')
         run: |
           # 作成するタグ名をマージ元ブランチ名から取得(feature/release-xxx)
           TARGET_TAG=$(echo ${{ github.head_ref }} | sed -r 's%^feature/release-(.+)$%\1%g')
