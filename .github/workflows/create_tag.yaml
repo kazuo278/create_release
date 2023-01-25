@@ -5,11 +5,10 @@ on:
       - closed
     branches:
       - main
-  workflow_dispatch:
   push:
     branches:
-      - main
       - 'feature/release-*'
+  workflow_dispatch:
 jobs:
   create-tag:
     permissions:
