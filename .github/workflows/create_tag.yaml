@@ -45,6 +45,6 @@ jobs:
           # 作成するタグ名を直近のタグ名から取得
           TARGET_TAG=$(git describe --abbrev=0)
           # 直近のタグ名を設定
-          TAG_MESSAGE=$(git tag -n ${{ needs.create-tag.outputs.target_tag }} | awk -F' ' '{print $2}')
+          TAG_MESSAGE=$(git tag -n $TARGET_TAG | awk -F' ' '{print $2}')
           # タグの登録
           sh ./.github/create_tag.sh $TARGET_TAG $TAG_MESSAGE
