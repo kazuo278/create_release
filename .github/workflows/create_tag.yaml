@@ -25,7 +25,7 @@ jobs:
       - name: create tag for push to 'feature/release-*' event
         if: github.event_name == 'push' && startsWith(github.ref_name,'feature/release-')
         run: |
-          # 作成するタグ名をブランチ名から取得(feature/release-xxx)
+          # 作成するタグ名を現在のブランチ名から取得(feature/release-xxx)
           TARGET_TAG=$(git rev-parse --abbrev-ref @ | sed -r 's%^feature/release-(.+)$%\1%g')
           # タグ名メッセージの設定
           TAG_MESSAGE="検証中"
@@ -35,7 +35,7 @@ jobs:
         if: github.event.pull_request.merged == true
         run: |
           # 作成するタグ名をマージ元ブランチ名から取得(feature/release-xxx)
-          TARGET_TAG=$(echo ${{ github.head_ref }} | sed -r 's%^feature/release-(.+)$%\1%g')
+          TARGET_TAG=$(echo ${{ github.head_ref }} | sed -r 's%^feature/(release|update|fix)-(.+)$%\2%g')
           TAG_MESSAGE="リリース：$TARGET_TAG"
           # タグの登録
           sh ./.github/create_tag.sh $TARGET_TAG $TAG_MESSAGE
