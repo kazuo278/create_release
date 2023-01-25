@@ -1,0 +1,51 @@
+name: Create a tag
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'feature/release-*'
+jobs:
+  create-tag:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: test
+        run: |
+          echo ${{ github.event_name }}
+          echo ${{ github.ref_name }}
+      - name: create tag for push to 'feature/release-*' event
+        if: github.event_name == 'push' && startsWith(github.ref_name,'feature/release-')
+        run: |
+          # 作成するタグ名をブランチ名から取得(feature/release-xxx)
+          TARGET_TAG=$(git rev-parse --abbrev-ref @ | sed -r 's%^feature/release-(.+)$%\1%g')
+          # タグ名メッセージの設定
+          TAG_MESSAGE="検証中"
+          # タグの登録
+          sh ./.github/create_tag.sh $TARGET_TAG $TAG_MESSAGE
+      - name: create tag for push to main event
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: |
+          # 作成するタグ名を直近のタグ名から取得
+          TARGET_TAG=$(git describe --abbrev=0)
+          # 直近のタグ名を設定
+          TAG_MESSAGE=$(git tag -n ${{ needs.create-tag.outputs.target_tag }} | awk -F' ' '{print $2}')
+          # タグの登録
+          sh ./.github/create_tag.sh $TARGET_TAG $TAG_MESSAGE
+      - name: create tag for pull request closed event
+        if: github.event.pull_request.merged == true
+        run: |
+          # 作成するタグ名をマージ元ブランチ名から取得(feature/release-xxx)
+          TARGET_TAG=$(echo ${{ github.head_ref }} | sed -r 's%^feature/release-(.+)$%\1%g')
+          TAG_MESSAGE="リリース：$TARGET_TAG"
+          # タグの登録
+          sh ./.github/create_tag.sh $TARGET_TAG $TAG_MESSAGE
